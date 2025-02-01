@@ -3,7 +3,7 @@
 
 ## Overview
 
-This repository contains my work on simulating plasma behaviour and magnetic field in the ADITYA-U tokamak at IPR, Gandhinagar.
+This repository contains my work on simulating plasma behaviour and magnetic field in the ADITYA-U tokamak at IPR, Gandhinagar as a part of my research project.
 
 ## Organization
 The repository contains several folders as given below with brief descriptions about their function and code.
@@ -14,6 +14,8 @@ The repository contains several folders as given below with brief descriptions a
     - **Toroid:** Field due to a toroidal shaped winding of wires
 - **aditya-u:** Contains code simulating the toroidal magnetic field, poloidal magnetic field and the net magnetic field in ADITYA-U with accurate physical parameters and coil positions.
 - **freegs_sim:** Contains code using FreeGS library to solve the Grad-Shafranov equation for realistic coil positions and geometries.
+
+Work in Progress -- More work to be added soon.
 
 
 
