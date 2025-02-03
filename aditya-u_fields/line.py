@@ -1,1 +1,0 @@
-import magpylib as magpy
