@@ -28,9 +28,9 @@ The repository contains several folders as given below with brief descriptions a
 -->The field was calculated at 1000 points inside the toroidal chamber and the field data was extracted for better visualization using paraview. You may find the streamline plots of the magnetic field in the toroidal and poloidal planes in the aditya-u folder.
 
 Here are some of the results:
-![Toroidal Coils](aditya-u/toroidal_coils.png)
-![Poloidal Coils](aditya-u/quiver_plot_toroidal_field.png)
-![Net Magnetic Field](aditya-u/helical_quiver.png)
+![Toroidal Coils](aditya-u_fields/toroidal_coils.png)
+![Poloidal Coils](aditya-u_fields/quiver_plot_toroidal_field.png)
+![Net Magnetic Field](aditya-u_fields/helical_quiver.png)
 
 
 Work in Progress -- More work to be added soon.
