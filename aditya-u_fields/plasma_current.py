@@ -1,169 +1,122 @@
-import numpy as np
 import magpylib as magpy
+import numpy as np
 from scipy.spatial.transform import Rotation as R
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 
-# ========================================================================
-# COIL GENERATION FUNCTIONS
-# ========================================================================
+# Forming the toroidal field coils first
 
 def form_rectangular_coil(position, orientation, width, height, thickness, turns, current):
-    """Create a rectangular coil with multiple turns."""
-    loop = magpy.current.Polyline(
-        vertices=[
-            (-width/2, height/2, 0),
-            (width/2, height/2, 0),
-            (width/2, -height/2, 0),
-            (-width/2, -height/2, 0),
-            (-width/2, height/2, 0)
-        ],
-        current=current
-    )
+    
+    loop = magpy.current.Polyline(vertices=[(-width/2, height/2, 0), (width/2, height/2, 0), (width/2, -height/2, 0), (-width/2, -height/2, 0), (-width/2, height/2, 0)], current=current)
 
     coils = []
     for i in range(turns):
+        offset = thickness/turns
         loop_copy = loop.copy()
-        loop_copy.position = (0, 0, thickness * i / turns)
-        angle = np.arctan2(position[1], position[0])
+        loop_copy.move([0, 0, offset*i])
+        angle = np.arctan(position[1]/position[0]) # Need to update the angle of the coil such that a 90 degree rotation makes it stand upright
         loop_copy.rotate(R.from_rotvec([0, 0, angle]))
         coils.append(loop_copy)
 
     coil = magpy.Collection(coils)
-    coil.position = position
+    coil.move(position)
     coil.rotate(orientation)
+
     return coil
 
-def generate_structured_grid(major_radius, minor_radius, resolution=20):
-    """Create structured grid in cylindrical coordinates (R, φ, Z)."""
-    R_vals = np.linspace(major_radius - 0.8*minor_radius, major_radius + 0.8*minor_radius, resolution)
-    phi_vals = np.linspace(0, 2*np.pi, resolution)
-    Z_vals = np.linspace(-minor_radius, minor_radius, resolution)
+def generate_points_minor_axis(major_radius, num_points):
+    # Generate points on a cirlce passing through the center of all the tf coils inside the chamber
+    theta = np.linspace(0, 2*np.pi, num_points)
+    x = major_radius * np.cos(theta)
+    y = major_radius * np.sin(theta)
+    z = np.zeros(num_points)
+    return x, y, z
 
-    R_grid, phi_grid, Z_grid = np.meshgrid(R_vals, phi_vals, Z_vals, indexing='ij')
-    
-    # Convert to Cartesian coordinates
-    x = R_grid * np.cos(phi_grid)
-    y = R_grid * np.sin(phi_grid)
-    z = Z_grid
-    
-    return x, y, z, R_grid, phi_grid, Z_grid
+def generate_points_in_chamber(major_radius, minor_radius, num_points):
+    # Generate points inside the toroidal chamber
+    phi = np.random.uniform(0, 2 * np.pi, num_points)  # Uniformly distributed along toroidal direction
+    theta = np.random.uniform(0, 2 * np.pi, num_points)  # Uniformly distributed in poloidal direction
+    r = np.random.uniform(0.1 * minor_radius, 0.9 * minor_radius, num_points)  # Avoid coil boundary
 
-# ========================================================================
-# SYSTEM SETUP
-# ========================================================================
+    # Compute Cartesian coordinates for points in vacuum
+    x_obs = (major_radius*0.9 + r * np.cos(theta)) * np.cos(phi)
+    y_obs = (major_radius*0.9 + r * np.cos(theta)) * np.sin(phi)
+    z_obs = r * np.sin(theta)
+
+    return x_obs, y_obs, z_obs
+
+def generate_points_everywhere(major_radius, num_points):
+    '''This function generates point everywhere in the volume of a cube with side length 2*major_radius'''
+    x_obs = np.random.uniform(-major_radius, major_radius, num_points)
+    y_obs = np.random.uniform(-major_radius, major_radius, num_points)
+    z_obs = np.random.uniform(-major_radius, major_radius, num_points)
+    return x_obs, y_obs, z_obs
 
 # Parameters
-major_radius = 0.75  # Major radius of tokamak [m]
-minor_radius = 0.25  # Minor radius [m]
-num_tf_coils = 18     # Number of toroidal field coils
-coil_current_tf = 1e5  # Current in TF coils [A]
-coil_current_pf = 5e4  # Current in PF coils [A]
+num_coils = 20
+major_radius = 0.75
+minor_radius = 0.25
+coil_current_tf_coils = 18750 # 18.75kA per loop --> 150kA for 8 loops
+coil_current_pf_coils = 1e4 # 10kA per loop
+coil_size = [0.5, 0.7] # --> [width, height]
+turns_per_coil = 8
+coil_thickness = 0.08
+num_plasma_current_coils = 8
+num_points = 1000
 
-# Generate structured grid
-x, y, z, R_grid, phi_grid, Z_grid = generate_structured_grid(major_radius, minor_radius, resolution=15)
-obs_points = np.array([x.flatten(), y.flatten(), z.flatten()]).T
-
-# ========================================================================
-# COIL CONFIGURATION
-# ========================================================================
-
-# Toroidal Field (TF) Coils
 tf_coils = []
-for i in range(num_tf_coils):
-    angle = 2*np.pi*i/num_tf_coils
-    position = (major_radius*np.cos(angle), major_radius*np.sin(angle), 0)
-    orientation = R.from_rotvec([0, 0, angle])
-    tf_coil = form_rectangular_coil(
-        position=position,
-        orientation=orientation,
-        width=0.4,
-        height=0.6,
-        thickness=0.1,
-        turns=8,
-        current=coil_current_tf
-    )
-    tf_coils.append(tf_coil)
+for i in range(num_coils):
+    angle = 2 * np.pi * i / num_coils  # Angular position of the coil
+    x = major_radius * np.cos(angle)
+    y = major_radius * np.sin(angle)
+    z = 0  # All coils lie in the same plane initially(for simplicity)
+    position = (x, y, z)
+    unit_vector = position / np.linalg.norm(position)
+    rotation_vector = np.pi/2 * unit_vector
+    rotation = R.from_rotvec(rotation_vector)
+    tf_coils.append(form_rectangular_coil(position=position, orientation=rotation, width=coil_size[0], height=coil_size[1], thickness=coil_thickness, turns=turns_per_coil, current=coil_current_tf_coils))
 
-# Poloidal Field (PF) Coils
-pf_coils = [
-    magpy.current.Circle(position=(0,0,0.4), diameter=1.2, current=-coil_current_pf),
-    magpy.current.Circle(position=(0,0,-0.4), diameter=1.2, current=-coil_current_pf),
-    magpy.current.Circle(position=(0,0,0.7), diameter=1.5, current=coil_current_pf),
-    magpy.current.Circle(position=(0,0,-0.7), diameter=1.5, current=coil_current_pf)
-]
+toroidal_field_coils = magpy.Collection(*tf_coils)
 
-# Plasma Current (Simplified)
-plasma_current = [
-    magpy.current.Circle(position=(0,0,z), diameter=1.0, current=2e5)
-    for z in np.linspace(-0.2, 0.2, 5)
-]
 
-# Combine all components
-system = magpy.Collection(*tf_coils, *pf_coils, *plasma_current)
+# Forming the plasma current coils
+plasma_current_coils = []
+for i in range(int(num_plasma_current_coils/2)):
+    position1  = (0, 0, i*0.01)
+    position2 = (0, 0, -i*0.01)
+    orientation = 0
+    plasma_current_coils.append(magpy.current.Circle(position=position1, diameter=1.5, current=coil_current_pf_coils))
+    plasma_current_coils.append(magpy.current.Circle(position=position2, diameter=1.5, current=coil_current_pf_coils))
+plasma_current = magpy.Collection(*plasma_current_coils)
 
-# ========================================================================
-# FIELD COMPUTATION AND VISUALIZATION
-# ========================================================================
+# Final system
+system = magpy.Collection(toroidal_field_coils, plasma_current)
+magpy.show(system)
 
-# Compute magnetic field at grid points
-B = system.getB(obs_points)
-B_normalized = B / np.linalg.norm(B, axis=1, keepdims=True)
+# Numpy array of observation points
+x_obs, y_obs, z_obs = generate_points_in_chamber(major_radius, minor_radius, num_points)
+obs_points = np.array([x_obs.flatten(), y_obs.flatten(), z_obs.flatten()]).T
 
-# Reshape to 3D grid structure
-Bx = B[:,0].reshape(x.shape)
-By = B[:,1].reshape(y.shape)
-Bz = B[:,2].reshape(z.shape)
+# Compute the magnetic field at all grid points
+field = system.getB(obs_points)
+field_norm = field / np.linalg.norm(field, axis=1, keepdims=True)
+Bx, By, Bz = field_norm[:, 0], field_norm[:, 1], field_norm[:, 2]
 
-# Create streamtube plot
-fig = go.Figure(data=go.Streamtube(
-    x=x.flatten(),
-    y=y.flatten(),
-    z=z.flatten(),
-    u=Bx.flatten(),
-    v=By.flatten(),
-    w=Bz.flatten(),
-    sizeref=0.3,          # Adjust tube thickness
-    maxdisplayed=3000,    # Reduce number of tubes for clarity
-    colorscale='Viridis',
-    showscale=True
-))
+# Plotting the magnetic field
+fig = plt.figure(figsize=(12, 8))
+ax = fig.add_subplot(111, projection='3d')
+ax.set_box_aspect([1, 1, 0.4])
+ax.quiver(x_obs, y_obs, z_obs, Bx, By, Bz, length=0.1, normalize=False)
+ax.set_xlabel('X-axis')
+ax.set_ylabel('Y-axis')
+ax.set_zlabel('Z-axis')
+plt.show()
 
-# Add coils to plot
-for coil in tf_coils + pf_coils:
-    if isinstance(coil, magpy.Collection):
-        # Handle Collections (e.g., multi-turn coils)
-        for child in coil.children:
-            if isinstance(child, (magpy.current.Polyline, magpy.current.Circle)):
-                vertices = child.vertices
-                fig.add_trace(go.Scatter3d(
-                    x=vertices[:,0], 
-                    y=vertices[:,1], 
-                    z=vertices[:,2],
-                    mode='lines',
-                    line=dict(color='red', width=4),
-                    name='TF/PF Coils'
-                ))
-    elif isinstance(coil, (magpy.current.Polyline, magpy.current.Circle)):
-        # Handle standalone coils
-        vertices = coil.vertices
-        fig.add_trace(go.Scatter3d(
-            x=vertices[:,0], 
-            y=vertices[:,1], 
-            z=vertices[:,2],
-            mode='lines',
-            line=dict(color='red', width=4),
-            name='PF Coils'
-        ))
-
-fig.update_layout(
-    scene=dict(
-        aspectmode='data',
-        camera=dict(eye=dict(x=1.5, y=1.5, z=0.8)),
-        xaxis_title='X [m]',
-        yaxis_title='Y [m]',
-        zaxis_title='Z [m]'
-    ),
-    margin=dict(l=0, r=0, b=0, t=0)
-)
-
-fig.show()
+# calculating the R dependence of the field
+R = np.sqrt(x_obs**2 + y_obs**2)
+fig1 = plt.figure(figsize=(12, 8))
+ax1 = fig1.add_subplot(111)
+ax1.scatter(R, np.linalg.norm(field, axis=1))
+ax1.set_xlabel('R')
+ax1.set_ylabel('B(T)')
+plt.show()

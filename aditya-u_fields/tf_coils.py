@@ -22,18 +22,31 @@ def form_rectangular_coil(position, orientation, width, height, thickness, turns
 
     return coil
 
+def form_coil_with_c_sections(num_sections, turns_per_section, position, orientation, width, height, thickness, current):
+    '''
+    Okay here I'm gonna define a function that forms a tf coil with c-sections like what's mentioned on the available papers online about how tf-coils are manufactured.
+    There's gonna be a certain number of conducting filaments per section
+    '''
+    coils = []
+    for i in range(num_sections):
+        num = i*0.01/num_sections
+        coils.extend(form_rectangular_coil(position, orientation, width-(width*num), height-(height*num), thickness, turns_per_section, current))
+    return magpy.Collection(*coils, override_parent=True)
+        
+
 # Parameters
 num_coils = 20
 major_radius = 0.75
 minor_radius = 0.25
-coil_current = 7500 # 7.5kA per loop --> 45kA for 6 loops
-coil_size = [0.5, 0.7] # --> [width, height]
-turns_per_coil = 6
-coil_thickness = 0.08
+coil_current = 4166 # 4.166kA per loop --> 50kA for 12 loops
+coil_size = [1.03, 1.26] # --> [width, height]
+turns_per_section = 6
+coil_thickness = 0.083
+num_sections = 2
 
 tf_coils = []
 for i in range(num_coils):
-    angle = 2 * np.pi * i / num_coils  # Angular position of the coil
+    angle = 2 * np.pi * i / num_coils  # Angular position of the filament
     x = major_radius * np.cos(angle)
     y = major_radius * np.sin(angle)
     z = 0  # All coils lie in the same plane initially(for simplicity)
@@ -41,7 +54,7 @@ for i in range(num_coils):
     unit_vector = position / np.linalg.norm(position)
     rotation_vector = np.pi/2 * unit_vector
     rotation = R.from_rotvec(rotation_vector)
-    tf_coils.append(form_rectangular_coil(position=position, orientation=rotation, width=coil_size[0], height=coil_size[1], thickness=coil_thickness, turns=turns_per_coil, current=coil_current))
+    tf_coils.append(form_coil_with_c_sections(num_sections, turns_per_section, position, rotation, coil_size[0], coil_size[1], coil_thickness, coil_current))
 
 toroidal_field_coils = magpy.Collection(*tf_coils)
 
@@ -52,11 +65,11 @@ magpy.show(toroidal_field_coils, animation=True)
 num_points = 500  # Number of observation points
 phi = np.random.uniform(0, 2 * np.pi, num_points)  # Uniformly distributed along toroidal direction
 theta = np.random.uniform(0, 2 * np.pi, num_points)  # Uniformly distributed in poloidal direction
-r = np.random.uniform(minor_radius,   minor_radius, num_points)  # Avoid coil boundary
+r = np.random.uniform(minor_radius*0.1,   minor_radius*0.9, num_points)  # Avoid coil boundary
 
 # Compute Cartesian coordinates for points in vacuum
-x_obs = (major_radius + r * np.cos(theta)) * np.cos(phi)
-y_obs = (major_radius + r * np.cos(theta)) * np.sin(phi)
+x_obs = (major_radius*0.9 + r * np.cos(theta)) * np.cos(phi)
+y_obs = (major_radius*0.9 + r * np.cos(theta)) * np.sin(phi)
 z_obs = r * np.sin(theta)
 
 
@@ -94,7 +107,7 @@ Br = np.linalg.norm(toroidal_field, axis=1)
 Br_sorted = Br[sorted_indices]
 # Plot as a line
 plt.figure(figsize=(8, 6))
-plt.plot(r_sorted, Br_sorted, label="Magnetic Field Strength")
+plt.scatter(r_sorted, Br_sorted, label="Magnetic Field Strength")
 plt.xlabel("Distance from the hollow center of the machine (m)")
 plt.ylabel("Magnetic Field Strength (T)")
 plt.title("Radial Variation of Magnetic Field in Toroidal Configuration")
@@ -105,6 +118,7 @@ plt.show()
 
 plt.figure(num=2)
 ax = plt.subplot(111 , projection='3d')
+ax.set_box_aspect([1,1,0.4])
 ax.quiver(x_obs, y_obs, z_obs, Bx, By, Bz, length=0.08, normalize=True)
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
