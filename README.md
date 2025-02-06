@@ -28,15 +28,33 @@ Here are some of the results:
   <img src="aditya-u_fields/toroidal_coils.png" width="49%">
   <img src="aditya-u_fields/quiver_plot_tf.png" width="49%">
 </p>
+<p align="center">
+  <b>Left:</b> Toroidal Field Coil Configuration | <b>Right:</b> Toroidal Magnetic field vectors inside the confinement chamber
+</p>
+
+<p align="center">
+  <img src="aditya-u_fields/tf_vs_R.png">
+</p>
+<p align="center">
+  Toroidal Field vs Radial distance(R) -- 1/R dependence is clearly inferrable
+</p>
 
 <p align="center">
   <img src="aditya-u_fields/helical_quiver.png" width="49%">
   <img src="aditya-u_fields/helical_quiver_2.png" width="49%">
+</p>
+<p align="center">
+  <b>Left:</b> Net magnetic field(toroidal + poloidal) forming helical field -- View 1 | <b>Right:</b> View 2
 </p>
 
 <p align="center">
   <img src="aditya-u_fields/data_extraction/helical_streamlines.png" width="49%">
   <img src="aditya-u_fields/data_extraction/helical_streamlines_1.png" width="49%">
 </p>
+<p align="center">
+  <b>Left:</b> Streamline visualization of the net helical field -- View 1 | <b>Right:</b> View 2
+</p>
+
+
 
 **Work in Progress** – More work to be added soon.
