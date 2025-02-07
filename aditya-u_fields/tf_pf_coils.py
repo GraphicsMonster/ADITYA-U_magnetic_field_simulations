@@ -24,6 +24,17 @@ def form_rectangular_coil(position, orientation, width, height, thickness, turns
 
     return coil
 
+def form_coil_with_c_sections(num_sections, turns_per_section, position, orientation, width, height, thickness, current):
+    '''
+    Okay here I'm gonna define a function that forms a tf coil with c-sections like what's mentioned on the available papers online about how tf-coils are manufactured.
+    There's gonna be a certain number of conducting filaments per section
+    '''
+    coils = []
+    for i in range(num_sections):
+        num = i*0.01/num_sections
+        coils.extend(form_rectangular_coil(position, orientation, width-(width*num), height-(height*num), thickness, turns_per_section, current))
+    return magpy.Collection(*coils, override_parent=True)
+
 def generate_points_minor_axis(major_radius, num_points):
     # Generate points on a cirlce passing through the center of all the tf coils inside the chamber
     theta = np.linspace(0, 2*np.pi, num_points)
@@ -49,15 +60,15 @@ def generate_points_in_chamber(major_radius, minor_radius, num_points):
 num_coils = 20
 major_radius = 0.75
 minor_radius = 0.25
-coil_current_tf_coils = 18750 # 18.75kA per loop --> 150kA for 8 loops
-coil_current_pf_coils = 1e4 # 10kA per loop
-coil_size = [0.5, 0.7] # --> [width, height]
-turns_per_coil = 8
-coil_thickness = 0.08
+coil_current = 4166 # 4.166kA per loop --> 50kA for 12 loops
+coil_size = [1.03, 1.26] # --> [width, height]
+turns_per_section = 6
+coil_thickness = 0.083
+num_sections = 2
 
 tf_coils = []
 for i in range(num_coils):
-    angle = 2 * np.pi * i / num_coils  # Angular position of the coil
+    angle = 2 * np.pi * i / num_coils  # Angular position of the filament
     x = major_radius * np.cos(angle)
     y = major_radius * np.sin(angle)
     z = 0  # All coils lie in the same plane initially(for simplicity)
@@ -65,7 +76,7 @@ for i in range(num_coils):
     unit_vector = position / np.linalg.norm(position)
     rotation_vector = np.pi/2 * unit_vector
     rotation = R.from_rotvec(rotation_vector)
-    tf_coils.append(form_rectangular_coil(position=position, orientation=rotation, width=coil_size[0], height=coil_size[1], thickness=coil_thickness, turns=turns_per_coil, current=coil_current_tf_coils))
+    tf_coils.append(form_coil_with_c_sections(num_sections, turns_per_section, position, rotation, coil_size[0], coil_size[1], coil_thickness, coil_current))
 
 toroidal_field_coils = magpy.Collection(*tf_coils)
 

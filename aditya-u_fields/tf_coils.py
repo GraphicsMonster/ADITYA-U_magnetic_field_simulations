@@ -3,6 +3,8 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 
+np.random.seed(42)
+
 def form_rectangular_coil(position, orientation, width, height, thickness, turns, current):
     
     loop = magpy.current.Polyline(vertices=[(-width/2, height/2, 0), (width/2, height/2, 0), (width/2, -height/2, 0), (-width/2, -height/2, 0), (-width/2, height/2, 0)], current=current)
@@ -24,12 +26,12 @@ def form_rectangular_coil(position, orientation, width, height, thickness, turns
 
 def form_coil_with_c_sections(num_sections, turns_per_section, position, orientation, width, height, thickness, current):
     '''
-    Okay here I'm gonna define a function that forms a tf coil with c-sections like what's mentioned on the available papers online about how tf-coils are manufactured.
-    There's gonna be a certain number of conducting filaments per section
+    Okay here I'm gonna define a function that forms a tf coil with sections like what's mentioned on the available papers online about how tf-coils are manufactured.
+    There's gonna be a certain number of conducting filaments per section. And sections will be rectangular in shape but with decreasing width and height(depending on the total number of sections).
     '''
     coils = []
     for i in range(num_sections):
-        num = i*0.01/num_sections
+        num = i*0.08/num_sections
         coils.extend(form_rectangular_coil(position, orientation, width-(width*num), height-(height*num), thickness, turns_per_section, current))
     return magpy.Collection(*coils, override_parent=True)
         
@@ -38,7 +40,7 @@ def form_coil_with_c_sections(num_sections, turns_per_section, position, orienta
 num_coils = 20
 major_radius = 0.75
 minor_radius = 0.25
-coil_current = 4166 # 4.166kA per loop --> 50kA for 12 loops
+coil_current = 12500 # 4.166kA per loop --> 50kA for 12 loops
 coil_size = [1.03, 1.26] # --> [width, height]
 turns_per_section = 6
 coil_thickness = 0.083
@@ -65,7 +67,7 @@ magpy.show(toroidal_field_coils, animation=True)
 num_points = 500  # Number of observation points
 phi = np.random.uniform(0, 2 * np.pi, num_points)  # Uniformly distributed along toroidal direction
 theta = np.random.uniform(0, 2 * np.pi, num_points)  # Uniformly distributed in poloidal direction
-r = np.random.uniform(minor_radius*0.1,   minor_radius*0.9, num_points)  # Avoid coil boundary
+r = np.random.uniform(minor_radius*0.1, minor_radius*0.9, num_points)  # Avoid coil boundary
 
 # Compute Cartesian coordinates for points in vacuum
 x_obs = (major_radius*0.9 + r * np.cos(theta)) * np.cos(phi)
