@@ -1,5 +1,3 @@
-# This model uses the same old "single-current-loop-around-the-torus" method to model the plasma but this time with a higher number of coils
-
 import magpylib as magpy
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -65,15 +63,14 @@ def form_coil_with_c_sections(num_sections, turns_per_section, position, orienta
 num_coils = 20
 major_radius = 0.75
 minor_radius = 0.25
-coil_current = 300e3/12 # 4.166kA per loop --> 50kA for 12 loops
+coil_current = 4166 # 4.166kA per loop --> 50kA for 12 loops
 coil_size = [1.03, 1.26] # --> [width, height]
 turns_per_section = 6
 coil_thickness = 0.083
 num_sections = 2
 num_points = 1000
-num_plasma_current_coils = 2
-current_per_plasma_current_coil = 250e3/num_plasma_current_coils # 100kA for shaped plasma, 250kA for circular plasma
-divertor_coil_current = 20e3 # 20kA per coil
+plasma_current = 150e3 # 150kA plasma current
+divertor_coil_current = 2e4 # 20kA per coil
 
 tf_coils = []
 for i in range(num_coils):
@@ -90,19 +87,36 @@ for i in range(num_coils):
 toroidal_field_coils = magpy.Collection(*tf_coils)
 
 
-# Forming the plasma current coils
+# Introducing plasma current distribution
+grid_size = 10
+R_plasma = np.linspace(0.6, 0.9, grid_size)
+Z_plasma = np.linspace(-0.2, 0.2, grid_size)
+phi_plasma = np.linspace(0, 2*np.pi, grid_size)
+loop_diameter = 0.05
 plasma_current_coils = []
-plasma_thickness = 0.2
-for i in range(int(num_plasma_current_coils/2)):
-    # Distributing the plasma current coils uniformly in the toroidal direction
-    z1 = i * plasma_thickness/num_plasma_current_coils
-    z2 = -z1
-    position1  = (0, 0, z1)
-    position2 = (0, 0, z2)
-    orientation = 0
-    plasma_current_coils.append(magpy.current.Circle(position=position1, diameter=1.5, current=current_per_plasma_current_coil))
-    plasma_current_coils.append(magpy.current.Circle(position=position2, diameter=1.5, current=current_per_plasma_current_coil))
-plasma_current = magpy.Collection(*plasma_current_coils)
+# adding a loop distribution: J = 1 - (r/a)^2
+for r in R_plasma:
+    for z in Z_plasma:
+        for phi in phi_plasma:
+            position = (r*np.cos(phi), r*np.sin(phi), z)
+
+            j_weight = max(0, 1 - (r/major_radius)**2)
+            if j_weight > 0:
+                loop = magpy.current.Circle(diameter=loop_diameter, current=1.0)
+                loop.move(position)
+                loop.rotate(R.from_rotvec([0, 0, 0]))
+                plasma_current_coils.append((loop, j_weight))
+
+total_weight = sum([weight for _, weight in plasma_current_coils])
+if total_weight > 0:
+    for loop, weight in plasma_current_coils:
+        loop.current = plasma_current * weight / total_weight
+
+else:
+    raise ValueError("distribtion not valid")
+
+plasma_current_coils = magpy.Collection(*[loop for loop, _ in plasma_current_coils])
+
 
 # Let's also add the plasma shaping coils -- Data provided by Dr. Joydeep Ghosh
 plasma_shaping_coils = []
@@ -126,7 +140,7 @@ plasma_shaping_coils = magpy.Collection(*plasma_shaping_coils)
 
 
 # Final system
-system = magpy.Collection(toroidal_field_coils, plasma_current)
+system = magpy.Collection(toroidal_field_coils, plasma_current_coils, plasma_shaping_coils)
 system.show()
 
 
@@ -215,7 +229,7 @@ print(f"min(psi_adjusted): {np.min(psi_adjusted)}")
 cs = plt.contour(RR, ZZ, psi_adjusted, levels=100, colors='r')
 plt.close()
 
-contours = cs.allsegs
+contours = cs.allsegs # To extract all the contour paths
 
 vessel_Rmin, vessel_Rmax = Rmin, Rmax
 vessel_Zmin, vessel_Zmax = Zmin, Zmax
@@ -269,7 +283,7 @@ else:
     max_Z_index = np.argmax(Z_contour)
     R_top = R_contour[max_Z_index]
     # Triangularity is then measured as the horizontal shift of the top relative to the magnetic axis, normalized by a.
-    triangularity = (R_top - mag_axis_R) / a
+    triangularity = (mag_axis_R - R_top) / a
 
     print("Elongation (kappa):", elongation)
     print("Triangularity (delta):", triangularity)
