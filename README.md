@@ -59,7 +59,7 @@ Here are some of the results:
 From the magnetic field data, the poloidal flux function was calculated using the cylindrical co-ordinate transformation of the magnetic field(expressed as the curl of a vector potential function) and axisymmetric properties of a tokamak. The plasma shape was then extracted by plotting the contour of the poloidal flux function. The plasma shape was found to be elliptical in nature, as expected.
 
 <p align="center">
-  <img src="aditya-u_fields/equilibrium/circular_plasma_with_limiter.png" width="49%">
+  <img src="aditya-u_fields/equilibrium/circular_plasma_with_modifications.png" width="49%">
 </p>
 <p align="center">
   Poloidal flux contours with limiter boudary. Plasma shape is circular.
