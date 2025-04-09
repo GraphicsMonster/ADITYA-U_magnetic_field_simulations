@@ -60,9 +60,25 @@ From the magnetic field data, the poloidal flux function was calculated using th
 
 <p align="center">
   <img src="aditya-u_fields/equilibrium/circular_plasma_with_modifications.png" width="49%">
+  <img src="aditya-u_fields/equilibrium/circular_plasma_exp.jpg" width="49%">
 </p>
 <p align="center">
-  Poloidal flux contours with limiter boudary. Plasma shape is circular.
+  Poloidal flux contours with limiter boudary. Plasma shape is circular. On the right is the experimentally obtained circular plasma in the actual ADITYA-U system for comparison.
+</p>
+
+<p align="center">
+  <img src="aditya-u_fields/tokamak_all_coils.png" width="49%">
+</p>
+<p align="center">
+  Final configuration tf_coils + plasma_current + plasma_shaping_coils
+</p>
+
+<p align="center">
+  <img src="aditya-u_fields/equilibrium/shaped_plasma_with_modifications_large_current.png" width="49%">
+  <img src="aditya-u_fields/equilibrium/shaped_plasma_exp.png" width="49%">
+</p>
+<p align="center">
+  Shaped plasma obtained. In comparison with the experimental results in the actual ADITYA-U system.
 </p>
 
 
